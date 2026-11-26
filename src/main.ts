@@ -10,6 +10,7 @@ import { ConflictWatcher } from "./core/conflicts";
 import {
   addWidget,
   moveWidget,
+  resizeWidget,
   removeWidget,
   commitDraft,
   discardDraft,
@@ -17,6 +18,7 @@ import {
   userDraftCount,
   pushLog,
 } from "./core/model";
+import { toast } from "./ui/dom";
 
 import type { AppContext, UIState } from "./ui/context";
 import { renderPalette } from "./ui/palette";
@@ -49,7 +51,9 @@ async function boot(): Promise<void> {
   });
 
   const proto = location.protocol === "https:" ? "wss" : "ws";
-  const url = `${proto}://${location.hostname}:${__SYNC_PORT__}/${workspace}`;
+  const token = new URL(location.href).searchParams.get("token");
+  const base = `${proto}://${location.hostname}:${__SYNC_PORT__}/${encodeURIComponent(workspace)}`;
+  const url = token ? `${base}?token=${encodeURIComponent(token)}` : base;
   const provider = new SyncProvider(url, shared.doc, awareness);
   const conflicts = new ConflictWatcher(shared, identity.userId);
 
@@ -152,6 +156,24 @@ async function boot(): Promise<void> {
     moveWidgetTo(widgetId, x, y) {
       moveWidget(shared, widgetId, x, y, identity.userId);
     },
+    resizeWidgetTo(widgetId, w, h) {
+      resizeWidget(shared, widgetId, w, h, identity.userId);
+    },
+    renameWorkspace(name) {
+      const clean = name.trim().slice(0, 80) || "Untitled dashboard";
+      shared.doc.transact(() => shared.meta.set("name", clean), identity.userId);
+    },
+    copyShareLink() {
+      const link = `${location.origin}/?user=${encodeURIComponent(identity.userId)}&room=${encodeURIComponent(workspace)}`;
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(link).then(
+          () => toast("Link copied — open it on another device to resume here"),
+          () => toast(link),
+        );
+      } else {
+        toast(link);
+      }
+    },
 
     toggleOffline() {
       if (provider.status === "offline") {
@@ -175,6 +197,7 @@ async function boot(): Promise<void> {
   wireObservers(app, awareness);
   trackCursor(app);
   renderAll();
+  requestAnimationFrame(() => document.body.classList.add("loaded"));
 
   // Persist scroll position so "UI position" is reconstructed exactly.
   document.getElementById("canvas-wrap")?.addEventListener("scroll", (e) => {

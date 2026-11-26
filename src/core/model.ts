@@ -29,7 +29,7 @@ const DEFAULT_SIZE: Record<WidgetType, { w: number; h: number }> = {
 function defaultConfig(type: WidgetType): Record<string, unknown> {
   switch (type) {
     case "metric":
-      return { value: "0", unit: "", trend: 0, accent: "#6ee7ff" };
+      return { value: "0", unit: "", trend: 0 };
     case "chart":
       return { series: [4, 8, 6, 12, 9, 15, 11], kind: "bar", accent: "#a78bfa" };
     case "table":
@@ -101,6 +101,15 @@ export function moveWidget(shared: Shared, id: string, x: number, y: number, act
     w.set("x", Math.max(0, x));
     w.set("y", Math.max(0, y));
     w.set("z", topZ(shared));
+  }, actor);
+}
+
+export function resizeWidget(shared: Shared, id: string, w: number, h: number, actor: string): void {
+  const widget = shared.widgets.get(id);
+  if (!widget) return;
+  shared.doc.transact(() => {
+    widget.set("w", Math.max(2, Math.min(16, Math.round(w))));
+    widget.set("h", Math.max(2, Math.min(12, Math.round(h))));
   }, actor);
 }
 

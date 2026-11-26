@@ -39,6 +39,10 @@ export interface AppContext {
   discardWidget(widgetId: string): void;
   deleteWidget(widgetId: string): void;
   moveWidgetTo(widgetId: string, x: number, y: number): void;
+  resizeWidgetTo(widgetId: string, w: number, h: number): void;
+
+  renameWorkspace(name: string): void;
+  copyShareLink(): void;
 
   toggleOffline(): void;
   toggleActivity(): void;

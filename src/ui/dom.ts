@@ -12,7 +12,6 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   for (const [key, value] of Object.entries(attrs)) {
     if (value === undefined || value === false) continue;
     if (key === "class") node.className = String(value);
-    else if (key === "html") node.innerHTML = String(value);
     else if (key.startsWith("on") && typeof value === "function") {
       node.addEventListener(key.slice(2).toLowerCase(), value as EventListener);
     } else if (value === true) {
@@ -40,6 +39,18 @@ export function initials(name: string): string {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+
+export function toast(message: string): void {
+  const host = document.getElementById("toasts");
+  if (!host) return;
+  const node = el("div", { class: "toast" }, [message]);
+  host.append(node);
+  requestAnimationFrame(() => node.classList.add("show"));
+  setTimeout(() => {
+    node.classList.remove("show");
+    setTimeout(() => node.remove(), 220);
+  }, 2800);
 }
 
 export function timeAgo(ts: number): string {

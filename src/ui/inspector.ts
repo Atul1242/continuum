@@ -93,7 +93,6 @@ function editTab(
       textField(app, id, "value", "Value", val("value")),
       textField(app, id, "unit", "Unit", val("unit")),
       numberField(app, id, "trend", "Trend %", val("trend")),
-      colorField(app, id, "accent", "Accent", val("accent") || "#6ee7ff"),
     );
   } else if (type === "chart") {
     fields.push(

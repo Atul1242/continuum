@@ -49,7 +49,10 @@ export function renderCanvas(app: AppContext): void {
       el("div", { class: "widget-body" }, [renderWidgetBody(view, app.shared)]),
     ]);
 
+    const handle = el("div", { class: "resize", title: "Drag to resize" });
+    node.append(handle);
     attachDrag(app, node, view.x, view.y);
+    attachResize(app, node, handle, view.w, view.h);
     nodes.push(node);
   }
 
@@ -59,7 +62,7 @@ export function renderCanvas(app: AppContext): void {
 function attachDrag(app: AppContext, node: HTMLElement, startGX: number, startGY: number): void {
   node.addEventListener("pointerdown", (ev) => {
     const target = ev.target as HTMLElement;
-    if (target.closest("input,textarea,button")) return;
+    if (target.closest("input,textarea,button,.resize")) return;
     const id = node.dataset.id!;
     app.select(id);
 
@@ -94,5 +97,42 @@ function attachDrag(app: AppContext, node: HTMLElement, startGX: number, startGY
 
     node.addEventListener("pointermove", onMove);
     node.addEventListener("pointerup", onUp);
+  });
+}
+
+function attachResize(
+  app: AppContext,
+  node: HTMLElement,
+  handle: HTMLElement,
+  startW: number,
+  startH: number,
+): void {
+  handle.addEventListener("pointerdown", (ev) => {
+    ev.stopPropagation();
+    const id = node.dataset.id!;
+    app.select(id);
+    const originX = ev.clientX;
+    const originY = ev.clientY;
+    app.ui.draggingId = id; // suppress canvas rebuild while resizing
+    handle.setPointerCapture(ev.pointerId);
+
+    const onMove = (e: PointerEvent): void => {
+      const w = Math.max(CELL_W * 2, startW * CELL_W + (e.clientX - originX));
+      const h = Math.max(CELL_H * 2, startH * CELL_H + (e.clientY - originY));
+      node.style.width = `${w - GAP}px`;
+      node.style.height = `${h - GAP}px`;
+    };
+
+    const onUp = (e: PointerEvent): void => {
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      app.ui.draggingId = null;
+      const w = Math.round((startW * CELL_W + (e.clientX - originX)) / CELL_W);
+      const h = Math.round((startH * CELL_H + (e.clientY - originY)) / CELL_H);
+      app.resizeWidgetTo(id, w, h);
+    };
+
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
   });
 }

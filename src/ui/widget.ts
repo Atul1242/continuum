@@ -24,14 +24,13 @@ function metric(view: WidgetView): HTMLElement {
   const value = String(view.config.value ?? "0");
   const unit = String(view.config.unit ?? "");
   const trend = Number(view.config.trend ?? 0);
-  const accent = String(view.config.accent ?? "#6ee7ff");
   const trendEl = trend
     ? el("span", { class: `trend ${trend > 0 ? "up" : "down"}` }, [
-        `${trend > 0 ? "▲" : "▼"} ${Math.abs(trend)}%`,
+        `${trend > 0 ? "+" : "−"}${Math.abs(trend)}%`,
       ])
     : el("span", {});
   return el("div", { class: "w-metric" }, [
-    el("div", { class: "w-metric-value", style: `color:${accent}` }, [
+    el("div", { class: "w-metric-value" }, [
       value,
       el("span", { class: "w-metric-unit" }, [unit]),
     ]),
@@ -84,7 +83,10 @@ function table(view: WidgetView): HTMLElement {
   rows.forEach((line, i) => {
     const cells = line.split(",").map((c) => c.trim());
     const tr = el("tr");
-    cells.forEach((c) => tr.append(el(i === 0 ? "th" : "td", {}, [c])));
+    cells.forEach((c) => {
+      const isNum = i > 0 && /^[-+]?[\d.,%$€]+$/.test(c);
+      tr.append(el(i === 0 ? "th" : "td", isNum ? { class: "num" } : {}, [c]));
+    });
     tbl.append(tr);
   });
   return tbl;

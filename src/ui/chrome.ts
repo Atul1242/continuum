@@ -21,12 +21,22 @@ export function renderTopbar(app: AppContext): void {
     ),
   );
 
+  const nameField = el("input", {
+    class: "brand-doc-input",
+    value: name,
+    "aria-label": "Dashboard name",
+    onChange: (e: Event) => app.renameWorkspace((e.target as HTMLInputElement).value),
+  }) as HTMLInputElement;
+  nameField.addEventListener("keydown", (e) => {
+    if ((e as KeyboardEvent).key === "Enter") nameField.blur();
+  });
+
   root.replaceChildren(
     el("div", { class: "brand" }, [
       el("span", { class: "brand-mark" }),
       el("div", { class: "brand-text" }, [
         el("span", { class: "brand-name" }, ["Continuum"]),
-        el("span", { class: "brand-doc" }, [name]),
+        nameField,
       ]),
     ]),
     steps,
@@ -54,6 +64,7 @@ export function renderStatusbar(app: AppContext): void {
   ]);
 
   const right = el("div", { class: "status-right" }, [
+    el("button", { class: "btn ghost", onClick: () => app.copyShareLink() }, ["Copy link"]),
     el("button", {
       class: `btn ${offline ? "primary" : "ghost"}`,
       onClick: () => app.toggleOffline(),
@@ -114,7 +125,7 @@ export function showResumeBanner(app: AppContext, snap: SessionSnapshot): void {
 
   const banner = el("div", { id: "resume" }, [
     el("div", { class: "resume-body" }, [
-      el("div", { class: "resume-title" }, ["Welcome back — pick up where you left off"]),
+      el("div", { class: "resume-title" }, ["Pick up where you left off"]),
       el("div", { class: "resume-detail" }, [
         `You were ${bits.join(", ")}. Last active on ${snap.lastDeviceLabel || "another device"} ${timeAgo(snap.updatedAt)}.`,
       ]),
