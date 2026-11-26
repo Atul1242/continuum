@@ -9,6 +9,6 @@ export default defineConfig({
     port: 5173,
   },
   define: {
-    __SYNC_PORT__: JSON.stringify(process.env.SYNC_PORT ?? "1234"),
+    __API_PORT__: JSON.stringify(process.env.PORT ?? process.env.API_PORT ?? "8787"),
   },
 });

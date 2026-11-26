@@ -52,7 +52,7 @@ async function boot(): Promise<void> {
 
   const proto = location.protocol === "https:" ? "wss" : "ws";
   const token = new URL(location.href).searchParams.get("token");
-  const base = `${proto}://${location.hostname}:${__SYNC_PORT__}/${encodeURIComponent(workspace)}`;
+  const base = `${proto}://${location.hostname}:${__API_PORT__}/sync/${encodeURIComponent(workspace)}`;
   const url = token ? `${base}?token=${encodeURIComponent(token)}` : base;
   const provider = new SyncProvider(url, shared.doc, awareness);
   const conflicts = new ConflictWatcher(shared, identity.userId);
