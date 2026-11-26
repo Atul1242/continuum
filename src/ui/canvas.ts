@@ -71,7 +71,11 @@ function attachDrag(app: AppContext, node: HTMLElement, startGX: number, startGY
     let moved = false;
     app.ui.draggingId = id;
     node.classList.add("dragging");
-    node.setPointerCapture(ev.pointerId);
+    try {
+      node.setPointerCapture(ev.pointerId);
+    } catch {
+      /* pointer capture is best-effort; dragging works without it */
+    }
 
     const onMove = (e: PointerEvent): void => {
       const dx = e.clientX - originX;
@@ -114,7 +118,11 @@ function attachResize(
     const originX = ev.clientX;
     const originY = ev.clientY;
     app.ui.draggingId = id; // suppress canvas rebuild while resizing
-    handle.setPointerCapture(ev.pointerId);
+    try {
+      handle.setPointerCapture(ev.pointerId);
+    } catch {
+      /* pointer capture is best-effort; resizing works without it */
+    }
 
     const onMove = (e: PointerEvent): void => {
       const w = Math.max(CELL_W * 2, startW * CELL_W + (e.clientX - originX));
