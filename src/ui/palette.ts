@@ -1,6 +1,7 @@
 import type { AppContext } from "./context";
 import type { WidgetType } from "../core/doc";
 import { el } from "./dom";
+import { typeIcon } from "./icons";
 
 const TYPES: { type: WidgetType; label: string; hint: string }[] = [
   { type: "metric", label: "Metric", hint: "A single number" },
@@ -16,7 +17,7 @@ export function renderPalette(app: AppContext): void {
 
   const buttons = TYPES.map((t) =>
     el("button", { class: "palette-item", onClick: () => app.openComposer(t.type) }, [
-      el("span", { class: `swatch ${t.type}` }),
+      el("span", { class: `swatch ${t.type}` }, [typeIcon(t.type, 16)]),
       el("span", { class: "palette-text" }, [
         el("span", { class: "palette-label" }, [t.label]),
         el("span", { class: "palette-hint" }, [t.hint]),

@@ -95,10 +95,7 @@ function editTab(
       numberField(app, id, "trend", "Trend %", val("trend")),
     );
   } else if (type === "chart") {
-    fields.push(
-      selectField(app, id, "kind", "Style", val("kind") || "bar", ["bar", "line"]),
-      colorField(app, id, "accent", "Accent", val("accent") || "#a78bfa"),
-    );
+    fields.push(selectField(app, id, "kind", "Style", val("kind") || "bar", ["bar", "line"]));
   } else if (type === "table") {
     fields.push(areaField(app, id, "rows", "Rows (comma-separated)", val("rows")));
   } else if (type === "status") {
@@ -151,16 +148,6 @@ function numberField(app: AppContext, id: string, field: string, label: string, 
     type: "number",
     value,
     onInput: (e: Event) => app.editDraft(id, field, Number((e.target as HTMLInputElement).value)),
-  });
-  return wrap(label, input);
-}
-
-function colorField(app: AppContext, id: string, field: string, label: string, value: string): HTMLElement {
-  const input = el("input", {
-    class: "field-color",
-    type: "color",
-    value,
-    onInput: (e: Event) => app.editDraft(id, field, (e.target as HTMLInputElement).value),
   });
   return wrap(label, input);
 }

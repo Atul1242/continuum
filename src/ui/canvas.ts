@@ -1,11 +1,12 @@
 import type { AppContext } from "./context";
 import { readWidget } from "../core/model";
 import { renderWidgetBody } from "./widget";
+import { typeIcon } from "./icons";
 import { el } from "./dom";
 
 export const CELL_W = 96;
 export const CELL_H = 72;
-export const GAP = 12;
+export const GAP = 18;
 
 // The dashboard surface. Widgets are absolutely positioned on a fixed grid so a
 // coordinate means the same thing on every device — part of reconstructing "UI
@@ -43,7 +44,10 @@ export function renderCanvas(app: AppContext): void {
       "data-id": id,
     }, [
       el("div", { class: "widget-head" }, [
-        el("span", { class: "widget-title" }, [view.title]),
+        el("div", { class: "widget-head-l" }, [
+          typeIcon(view.type, 15),
+          el("span", { class: "widget-title" }, [view.title]),
+        ]),
         hasDraft ? el("span", { class: "badge" }, ["unsaved"]) : el("span", {}),
       ]),
       el("div", { class: "widget-body" }, [renderWidgetBody(view, app.shared)]),

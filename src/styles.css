@@ -148,17 +148,20 @@ button {
   transform: scale(0.99);
 }
 .swatch {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   flex: none;
-  border: 1px solid var(--line-2);
+  display: grid;
+  place-items: center;
+  background: var(--subtle);
+  border: 1px solid var(--line);
+  color: var(--secondary);
 }
-.swatch.metric { background: #eef4ff; }
-.swatch.chart { background: #e9f1ff; }
-.swatch.table { background: #f1efe9; }
-.swatch.status { background: #eaf6f0; }
-.swatch.note { background: #fbf4e6; }
+.palette-item:hover .swatch {
+  color: var(--text);
+  border-color: var(--line-2);
+}
 
 .palette-text {
   display: flex;
@@ -410,9 +413,19 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 10px 13px;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--line);
   cursor: grab;
+}
+.widget-head-l {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.widget-head-l .ic {
+  color: var(--muted);
+  flex: none;
 }
 .widget-title {
   font-size: 12.5px;
@@ -492,6 +505,18 @@ button {
 .w-chart {
   width: 100%;
   height: 100%;
+}
+.w-chart .line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.w-chart .area {
+  fill: var(--accent);
+  opacity: 0.1;
+}
+.w-chart .bar {
+  fill: var(--accent);
 }
 
 .w-table {
