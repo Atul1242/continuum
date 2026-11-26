@@ -6,7 +6,7 @@ import { el } from "./dom";
 
 export const CELL_W = 96;
 export const CELL_H = 72;
-export const GAP = 18;
+export const GAP = 20;
 
 // The dashboard surface. Widgets are absolutely positioned on a fixed grid so a
 // coordinate means the same thing on every device — part of reconstructing "UI

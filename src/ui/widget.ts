@@ -48,11 +48,22 @@ function chart(view: WidgetView): HTMLElement {
   svg.setAttribute("preserveAspectRatio", "none");
   svg.classList.add("w-chart");
 
+  // A quiet baseline grounds the series.
+  const axis = document.createElementNS(svgNS, "line");
+  axis.setAttribute("x1", "0");
+  axis.setAttribute("y1", "43");
+  axis.setAttribute("x2", "100");
+  axis.setAttribute("y2", "43");
+  axis.setAttribute("class", "axis");
+  axis.setAttribute("vector-effect", "non-scaling-stroke");
+  svg.append(axis);
+
   // Colour comes from CSS (the single theme accent), so every chart stays in
   // step with the interface instead of each one carrying its own hue.
   if (kind === "line") {
     const step = series.length > 1 ? 100 / (series.length - 1) : 100;
-    const pts = series.map((v, i) => `${i * step} ${44 - (v / max) * 38 - 3}`).join(" ");
+    const coords = series.map((v, i) => [i * step, 44 - (v / max) * 38 - 3] as const);
+    const pts = coords.map(([x, y]) => `${x} ${y}`).join(" ");
     const area = document.createElementNS(svgNS, "polygon");
     area.setAttribute("points", `0 44 ${pts} 100 44`);
     area.setAttribute("class", "area");
@@ -61,6 +72,18 @@ function chart(view: WidgetView): HTMLElement {
     line.setAttribute("class", "line");
     line.setAttribute("vector-effect", "non-scaling-stroke");
     svg.append(area, line);
+    // Invisible hit targets give each point a native value tooltip on hover.
+    coords.forEach(([x, y], i) => {
+      const hit = document.createElementNS(svgNS, "circle");
+      hit.setAttribute("cx", String(x));
+      hit.setAttribute("cy", String(y));
+      hit.setAttribute("r", "3");
+      hit.setAttribute("class", "hit");
+      const title = document.createElementNS(svgNS, "title");
+      title.textContent = String(series[i] ?? "");
+      hit.append(title);
+      svg.append(hit);
+    });
   } else {
     const bw = 100 / (series.length * 1.5);
     series.forEach((v, i) => {
@@ -72,6 +95,9 @@ function chart(view: WidgetView): HTMLElement {
       rect.setAttribute("height", String(h));
       rect.setAttribute("rx", "1");
       rect.setAttribute("class", "bar");
+      const title = document.createElementNS(svgNS, "title");
+      title.textContent = String(v);
+      rect.append(title);
       svg.append(rect);
     });
   }
