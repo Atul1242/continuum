@@ -4,9 +4,9 @@ import { renderWidgetBody } from "./widget";
 import { typeIcon } from "./icons";
 import { el } from "./dom";
 
-export const CELL_W = 96;
-export const CELL_H = 72;
-export const GAP = 20;
+export const CELL_W = 100;
+export const CELL_H = 76;
+export const GAP = 26;
 
 // The dashboard surface. Widgets are absolutely positioned on a fixed grid so a
 // coordinate means the same thing on every device — part of reconstructing "UI
