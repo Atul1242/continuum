@@ -90,7 +90,7 @@ Rather than use `y-websocket`, the provider (`src/core/provider.ts`) and relay (
 
 **Reconnection.** The provider reconnects with exponential backoff and jitter, and distinguishes a *dropped* connection (auto-reconnect) from a *user-requested* offline (the demo switch — stays offline until you choose to return). On any disconnect it clears its knowledge of other peers' presence, which is re-learned on reconnect.
 
-**The relay** holds one authoritative `Y.Doc` per workspace, applies the same protocols, rebroadcasts each update to the other connected clients, and snapshots the document to disk (debounced) so the server is durable across restarts too.
+**The relay** holds one authoritative `Y.Doc` per workspace, applies the same protocols, rebroadcasts each update to the other connected clients, and persists every update to SQLite as an append-only log with periodic snapshot compaction, so the server is durable across restarts too. The full backend — REST API, accounts, and this persistence — is described in [BACKEND.md](BACKEND.md).
 
 ## The session / resume engine
 
@@ -113,8 +113,8 @@ CRDTs resolve concurrent edits deterministically at the data-structure level —
 ## Trade-offs and what's next
 
 - **No framework.** A small hand-written DOM layer keeps the interesting engineering (state, sync, reconstruction) legible and dependency-light. The cost is more manual rendering code; the benefit is that nothing is hidden behind a framework's reconciler.
-- **Whole-document disk snapshots** on the server are simple and correct for this scale; an append-only update log would scale better.
-- **Auth is a shared secret.** With `SYNC_TOKEN` set, the relay rejects clients that don't present it, but there is no per-user identity yet. The `session` layer already models a permission/role field; enforcing it per workspace is the natural next step.
+- **Server persistence is an append-only update log in SQLite** with snapshot compaction, so documents survive restarts (see BACKEND.md).
+- **Accounts exist** (scrypt-hashed passwords, database-backed sessions), but per-workspace authorisation isn't enforced on the sync socket yet — the `members`/`role` tables are in place for it.
 - **No session TTL.** Operational state is kept indefinitely; production would expire it.
 
 None of these affect the core demonstration — they are where a production version would continue from here.

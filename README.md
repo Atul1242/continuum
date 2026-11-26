@@ -54,6 +54,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design, data flo
 - **State / CRDT:** Yjs
 - **Local persistence:** y-indexeddb
 - **Transport:** a custom provider + relay built on `y-protocols` (sync + awareness) over `ws`
+- **Backend:** Fastify + SQLite (`node:sqlite`) — REST API, accounts, and durable document storage ([docs/BACKEND.md](docs/BACKEND.md))
 - **Build/dev:** Vite
 
 ## Running it
@@ -63,7 +64,7 @@ npm install
 npm run dev
 ```
 
-This starts the Vite dev server (`http://localhost:5173`) and the sync relay (`ws://localhost:1234`) together.
+This starts the Vite dev server (`http://localhost:5173`) and the backend — REST API and realtime sync — on `http://localhost:8787`. See [`docs/BACKEND.md`](docs/BACKEND.md) for the API and database.
 
 **See it resume across "devices":**
 
@@ -89,10 +90,11 @@ src/
   core/        state, identity, persistence, sync provider, session engine, conflict watcher
   ui/          palette, canvas, inspector, chrome, presence — pure render functions
   main.ts      orchestration: wires the document, provider, session, and UI together
-server/
-  index.ts     the WebSocket relay — one Y.Doc per workspace, persisted to disk
+server/        Fastify API + Yjs sync on one port, backed by SQLite
+  index.ts     entry; config.ts, db.ts, store.ts, auth.ts, models.ts, sync.ts, api.ts
 docs/
   ARCHITECTURE.md   full design and trade-offs
+  BACKEND.md        REST API, database schema, and persistence
   DEMO.md           a 90-second demo script
 ```
 
@@ -104,12 +106,12 @@ Continuum is a local-first app, which removes a whole class of exposure — sens
 - **Optional shared-secret auth.** Set `SYNC_TOKEN` and the relay rejects any client that doesn't present it (`?token=`). Unset by default so local demos stay frictionless.
 - **Workspace-name validation.** Names are constrained to `[a-z0-9_-]{1,64}` on both client and server, so they can't be used for path traversal when the server snapshots a workspace to disk.
 - **Crash-proof framing.** The relay caps frame size and wraps every decode in a guard, so a malformed or oversized message can't take down a connection or the process.
+- **Password security.** Accounts use scrypt-hashed, salted passwords — never stored in the clear — and opaque session tokens kept in httpOnly cookies, so scripts can't read them.
 
 ## Honest limitations
 
-- Auth is a single shared secret, not per-user identity or per-workspace authorisation. The `permission` field in session state is modelled but not yet enforced server-side.
-- Server persistence is a whole-document snapshot to disk, debounced. A real deployment would use an append-only update log.
-- Session state is retained indefinitely; it has no TTL or garbage collection.
+- Accounts exist (scrypt + sessions), but per-workspace authorisation isn't enforced yet — any client may still open any workspace's sync socket. The `members`/`role` tables are in place for it, and wiring the frontend sign-in to them is the next step.
+- The in-document session (operational) state has no TTL or garbage collection.
 
 These are deliberate scope choices, not oversights — see the architecture notes for where each would slot in.
 
