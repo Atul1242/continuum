@@ -8,7 +8,7 @@ Run `npm run dev`, then:
 
 2. **Do some real work and leave it unfinished (20s).** Move the **Review** step. Select the "Failed (last hour)" metric and change its value in the inspector — *don't* save it (note the "unsaved" badge and the "N unsaved" status). Start adding a new **Chart** from the palette, type a title, but *don't* click "Add to canvas."
 
-3. **Switch devices (20s).** Open a *second* window at the same URL (`?user=demo`) — this stands in for picking up a tablet. A banner appears: *"Welcome back — you were on the Review step, editing 'Failed (last hour)', 1 unsaved change, a half-finished chart. Last active on Laptop just now."* Click **Resume**: the second window jumps to the Review step, re-selects the metric with the unsaved edit still pending, and the half-finished chart form is back. This is the headline moment — operational state, not just data.
+3. **Switch devices (20s).** Hit **Copy link** (it captures your `?user=&room=` URL) and open it in a *second* window — this stands in for picking up a tablet. A banner appears: *"Welcome back — you were on the Review step, editing 'Failed (last hour)', 1 unsaved change, a half-finished chart. Last active on Laptop just now."* Click **Resume**: the second window jumps to the Review step, re-selects the metric with the unsaved edit still pending, and the half-finished chart form is back. This is the headline moment — operational state, not just data.
 
 4. **Go offline and keep working (20s).** In either window click **Simulate offline** (status turns red). Keep editing — drag widgets, change values. Click **Come back online**: the edits reconcile instantly. Nothing was lost; nothing had to be manually replayed.
 

@@ -114,7 +114,7 @@ CRDTs resolve concurrent edits deterministically at the data-structure level —
 
 - **No framework.** A small hand-written DOM layer keeps the interesting engineering (state, sync, reconstruction) legible and dependency-light. The cost is more manual rendering code; the benefit is that nothing is hidden behind a framework's reconciler.
 - **Whole-document disk snapshots** on the server are simple and correct for this scale; an append-only update log would scale better.
-- **No auth.** The relay lets any client into any workspace. The `session` layer already models a permission/role field; enforcing it server-side is the natural next step.
+- **Auth is a shared secret.** With `SYNC_TOKEN` set, the relay rejects clients that don't present it, but there is no per-user identity yet. The `session` layer already models a permission/role field; enforcing it per workspace is the natural next step.
 - **No session TTL.** Operational state is kept indefinitely; production would expire it.
 
 None of these affect the core demonstration — they are where a production version would continue from here.

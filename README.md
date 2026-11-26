@@ -38,6 +38,7 @@ All three are CRDTs, so edits from any device merge deterministically with no ce
 - **Cross-device recovery** — open the same workspace as the same user on another device and Continuum offers to resume you at the exact stage, with your unsaved changes intact.
 - **Offline / online transition** — the app is local-first (IndexedDB). It works fully offline, queues nothing fragile (the sync protocol is state-based, so reconnection reconciles both sides), and shows a live connection state. A "Simulate offline" switch demonstrates it without unplugging anything.
 - **Restoration of unfinished workflows** — a half-finished "add widget" form and the workflow step you were on are reconstructed on the next device.
+- **Workspace tooling** — drag to move or resize widgets on a grid, rename the dashboard inline, and copy a one-click share link that reopens the same workspace, as you, on another device.
 
 ## How it works
 
@@ -74,6 +75,13 @@ This starts the Vite dev server (`http://localhost:5173`) and the sync relay (`w
 
 **See offline survival:** click **Simulate offline**, keep editing, then **Come back online** — your edits reconcile automatically.
 
+**Requiring a shared secret (optional):** start the relay with a token and clients must present it.
+
+```bash
+SYNC_TOKEN=some-secret npm run dev
+# then open http://localhost:5173/?token=some-secret
+```
+
 ## Project structure
 
 ```
@@ -88,10 +96,19 @@ docs/
   DEMO.md           a 90-second demo script
 ```
 
+## Security
+
+Continuum is a local-first app, which removes a whole class of exposure — sensitive state lives in the browser and is only shared with peers you invite into a workspace. On top of that:
+
+- **No HTML injection path.** Every piece of user or peer content — widget titles, note bodies, table cells, display names, cursors — is rendered through text nodes, never `innerHTML`. There is no string-to-DOM sink in the codebase.
+- **Optional shared-secret auth.** Set `SYNC_TOKEN` and the relay rejects any client that doesn't present it (`?token=`). Unset by default so local demos stay frictionless.
+- **Workspace-name validation.** Names are constrained to `[a-z0-9_-]{1,64}` on both client and server, so they can't be used for path traversal when the server snapshots a workspace to disk.
+- **Crash-proof framing.** The relay caps frame size and wraps every decode in a guard, so a malformed or oversized message can't take down a connection or the process.
+
 ## Honest limitations
 
-- The relay authenticates nothing — any client may join any workspace. Production would need auth and per-workspace authorisation (the permission field in session state is modelled but not enforced server-side).
-- Server persistence is a simple whole-document snapshot to disk, debounced. A real deployment would use an append-only update log.
+- Auth is a single shared secret, not per-user identity or per-workspace authorisation. The `permission` field in session state is modelled but not yet enforced server-side.
+- Server persistence is a whole-document snapshot to disk, debounced. A real deployment would use an append-only update log.
 - Session state is retained indefinitely; it has no TTL or garbage collection.
 
 These are deliberate scope choices, not oversights — see the architecture notes for where each would slot in.
