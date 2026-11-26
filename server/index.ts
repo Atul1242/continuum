@@ -1,190 +1,29 @@
-import { WebSocketServer, WebSocket } from "ws";
-import * as Y from "yjs";
-import * as syncProtocol from "y-protocols/sync";
-import {
-  Awareness,
-  applyAwarenessUpdate,
-  encodeAwarenessUpdate,
-  removeAwarenessStates,
-} from "y-protocols/awareness";
-import * as encoding from "lib0/encoding";
-import * as decoding from "lib0/decoding";
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import Fastify from "fastify";
+import cors from "@fastify/cors";
+import cookie from "@fastify/cookie";
 
-// The relay. It is deliberately thin: one Y.Doc per workspace, the standard
-// sync + awareness protocols, and periodic persistence to disk. It holds no
-// business logic and makes no decisions about conflicts — the CRDT does that.
-// Clients remain fully functional without it; it only accelerates sharing.
+import { config } from "./config";
+import "./db"; // open and migrate the database before anything queries it
+import { registerApi } from "./api";
+import { attachSync } from "./sync";
 
-const PORT = Number(process.env.SYNC_PORT ?? 1234);
-const STORE_DIR = join(process.cwd(), ".sync-store");
-mkdirSync(STORE_DIR, { recursive: true });
+// One process serves the REST API and the realtime sync socket on a single
+// port: HTTP routes under /api, the Yjs sync protocol under /sync/<workspace>.
 
-// Optional shared secret. When SYNC_TOKEN is set, clients must present it as a
-// ?token= query param; unset (the default for local demos) means open access.
-const TOKEN = process.env.SYNC_TOKEN ?? "";
-// Reject oversized frames so a single client can't exhaust memory.
-const MAX_PAYLOAD = 2 * 1024 * 1024;
-// Workspace names become file paths, so constrain them tightly.
-const ROOM_RE = /^[a-z0-9_-]{1,64}$/i;
+const app = Fastify({ logger: false, trustProxy: true });
 
-const MSG_SYNC = 0;
-const MSG_AWARENESS = 1;
+app.register(cors, { origin: config.corsOrigin, credentials: true });
+app.register(cookie);
+registerApi(app);
 
-interface Room {
-  name: string;
-  doc: Y.Doc;
-  awareness: Awareness;
-  conns: Map<WebSocket, Set<number>>;
-  saveTimer: NodeJS.Timeout | null;
+// Share Fastify's underlying HTTP server with the WebSocket layer.
+attachSync(app.server);
+
+try {
+  await app.listen({ port: config.port, host: "0.0.0.0" });
+  console.log(`[continuum] API + sync listening on http://localhost:${config.port}`);
+  console.log(`[continuum] database: ${config.dbPath}`);
+} catch (err) {
+  console.error("[continuum] failed to start:", err);
+  process.exit(1);
 }
-
-const rooms = new Map<string, Room>();
-
-function storePath(name: string): string {
-  return join(STORE_DIR, `${name.replace(/[^a-z0-9_-]/gi, "_")}.bin`);
-}
-
-function getRoom(name: string): Room {
-  let room = rooms.get(name);
-  if (room) return room;
-
-  const doc = new Y.Doc();
-  const path = storePath(name);
-  if (existsSync(path)) {
-    try {
-      Y.applyUpdate(doc, readFileSync(path));
-    } catch (err) {
-      console.error(`[continuum] could not load "${name}":`, err);
-    }
-  }
-
-  const awareness = new Awareness(doc);
-  awareness.setLocalState(null); // the server is not a participant
-
-  room = { name, doc, awareness, conns: new Map(), saveTimer: null };
-
-  doc.on("update", (update: Uint8Array, origin: unknown) => {
-    const enc = encoding.createEncoder();
-    encoding.writeVarUint(enc, MSG_SYNC);
-    syncProtocol.writeUpdate(enc, update);
-    const msg = encoding.toUint8Array(enc);
-    for (const conn of room!.conns.keys()) {
-      if (conn !== origin && conn.readyState === WebSocket.OPEN) conn.send(msg);
-    }
-    scheduleSave(room!);
-  });
-
-  awareness.on(
-    "update",
-    ({ added, updated, removed }: { added: number[]; updated: number[]; removed: number[] }, origin: unknown) => {
-      const changed = [...added, ...updated, ...removed];
-      const enc = encoding.createEncoder();
-      encoding.writeVarUint(enc, MSG_AWARENESS);
-      encoding.writeVarUint8Array(enc, encodeAwarenessUpdate(awareness, changed));
-      const msg = encoding.toUint8Array(enc);
-      for (const conn of room!.conns.keys()) {
-        if (conn !== origin && conn.readyState === WebSocket.OPEN) conn.send(msg);
-      }
-    },
-  );
-
-  rooms.set(name, room);
-  return room;
-}
-
-function scheduleSave(room: Room): void {
-  if (room.saveTimer) return;
-  room.saveTimer = setTimeout(() => {
-    room.saveTimer = null;
-    try {
-      writeFileSync(storePath(room.name), Y.encodeStateAsUpdate(room.doc));
-    } catch (err) {
-      console.error(`[continuum] could not save "${room.name}":`, err);
-    }
-  }, 1500);
-}
-
-const wss = new WebSocketServer({
-  port: PORT,
-  maxPayload: MAX_PAYLOAD,
-  verifyClient: (info, done) => {
-    if (!TOKEN) return done(true);
-    try {
-      const url = new URL(info.req.url ?? "", "http://localhost");
-      done(url.searchParams.get("token") === TOKEN);
-    } catch {
-      done(false);
-    }
-  },
-});
-
-wss.on("connection", (conn, req) => {
-  let name = "main";
-  try {
-    name = decodeURIComponent((req.url ?? "/main").slice(1).split("?")[0] || "main");
-  } catch {
-    name = "";
-  }
-  if (!ROOM_RE.test(name)) {
-    conn.close(1008, "invalid workspace");
-    return;
-  }
-  const room = getRoom(name);
-  const controlled = new Set<number>();
-  room.conns.set(conn, controlled);
-  conn.binaryType = "arraybuffer";
-
-  // Step 1: ask the client what it has, so we can send what it's missing.
-  const enc = encoding.createEncoder();
-  encoding.writeVarUint(enc, MSG_SYNC);
-  syncProtocol.writeSyncStep1(enc, room.doc);
-  conn.send(encoding.toUint8Array(enc));
-
-  // Push any awareness we already know about.
-  const states = room.awareness.getStates();
-  if (states.size > 0) {
-    const aenc = encoding.createEncoder();
-    encoding.writeVarUint(aenc, MSG_AWARENESS);
-    encoding.writeVarUint8Array(
-      aenc,
-      encodeAwarenessUpdate(room.awareness, Array.from(states.keys())),
-    );
-    conn.send(encoding.toUint8Array(aenc));
-  }
-
-  conn.on("message", (data: ArrayBuffer) => {
-    // A malformed frame must never take down the connection or the process.
-    try {
-      const decoder = decoding.createDecoder(new Uint8Array(data));
-      const reply = encoding.createEncoder();
-      const type = decoding.readVarUint(decoder);
-
-      if (type === MSG_SYNC) {
-        encoding.writeVarUint(reply, MSG_SYNC);
-        syncProtocol.readSyncMessage(decoder, reply, room.doc, conn);
-        if (encoding.length(reply) > 1) conn.send(encoding.toUint8Array(reply));
-      } else if (type === MSG_AWARENESS) {
-        const update = decoding.readVarUint8Array(decoder);
-        const before = new Set(room.awareness.getStates().keys());
-        applyAwarenessUpdate(room.awareness, update, conn);
-        for (const id of room.awareness.getStates().keys()) {
-          if (!before.has(id)) controlled.add(id);
-        }
-      }
-    } catch (err) {
-      console.error(`[continuum] bad frame on "${name}":`, err);
-    }
-  });
-
-  conn.on("close", () => {
-    room.conns.delete(conn);
-    removeAwarenessStates(room.awareness, Array.from(controlled), null);
-    console.log(`[continuum] "${name}" — ${room.conns.size} client(s)`);
-  });
-
-  console.log(`[continuum] "${name}" — ${room.conns.size} client(s)`);
-});
-
-console.log(`[continuum] sync server listening on ws://localhost:${PORT}`);

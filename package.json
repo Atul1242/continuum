@@ -5,13 +5,16 @@
   "description": "A workspace that reconstructs your exact operational state across devices, crashes, and offline gaps.",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k -n web,sync -c cyan,magenta \"vite\" \"npm:sync\"",
-    "sync": "tsx watch server/index.ts",
-    "sync:prod": "tsx server/index.ts",
+    "dev": "concurrently -k -n web,api -c cyan,magenta \"vite\" \"npm:server\"",
+    "server": "tsx watch server/index.ts",
+    "server:prod": "tsx server/index.ts",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.5",
+    "@fastify/cors": "^10.1.0",
+    "fastify": "^5.12.8",
     "lib0": "^0.2.97",
     "y-indexeddb": "^9.0.12",
     "y-protocols": "^1.0.6",
