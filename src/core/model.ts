@@ -31,11 +31,11 @@ function defaultConfig(type: WidgetType): Record<string, unknown> {
     case "metric":
       return { value: "0", unit: "", trend: 0 };
     case "chart":
-      return { series: [4, 8, 6, 12, 9, 15, 11], kind: "bar", accent: "#a78bfa" };
+      return { series: [4, 8, 6, 12, 9, 15, 11], kind: "bar", accent: "#1f78ff" };
     case "table":
       return { rows: "Region, Value\nNorth, 128\nSouth, 94" };
     case "note":
-      return { accent: "#fcd34d" };
+      return {};
     case "status":
       return { state: "ok", label: "Operational" };
   }

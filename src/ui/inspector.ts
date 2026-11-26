@@ -107,7 +107,6 @@ function editTab(
       textField(app, id, "label", "Label", val("label")),
     );
   } else if (type === "note") {
-    fields.push(colorField(app, id, "accent", "Accent", val("accent") || "#fcd34d"));
     fields.push(noteField(app, id));
   }
 

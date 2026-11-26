@@ -294,7 +294,7 @@ function seedIfEmpty(app: AppContext): void {
   place(addWidget(shared, "status", identity.userId), 6, 0,
     { state: "warn", label: "Gateway degraded" }, "Payment gateway");
   place(addWidget(shared, "chart", identity.userId), 0, 2,
-    { series: [9, 11, 8, 14, 10, 18, 22, 16], kind: "line", accent: "#a78bfa" }, "Failure rate — 24h");
+    { series: [9, 11, 8, 14, 10, 18, 22, 16], kind: "line", accent: "#1f78ff" }, "Failure rate — 24h");
   place(addWidget(shared, "note", identity.userId), 5, 2, {}, "Incident notes");
   app.renderAll();
 }
