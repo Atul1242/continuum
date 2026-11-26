@@ -104,7 +104,7 @@ button {
 }
 
 .panel {
-  background: var(--surface);
+  background: var(--page);
   overflow-y: auto;
   padding: 24px 18px;
 }
@@ -134,15 +134,17 @@ button {
   align-items: center;
   gap: 14px;
   padding: 16px 14px;
-  background: transparent;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   text-align: left;
   color: var(--text);
+  box-shadow: var(--shadow-xs);
   transition: background var(--dur) ease-out, border-color var(--dur) ease-out;
 }
 .palette-item:hover {
-  background: var(--hover);
+  border-color: var(--line-2);
+  box-shadow: var(--shadow);
 }
 .palette-item:active {
   transform: scale(0.99);
@@ -273,7 +275,7 @@ button {
   gap: 24px;
   padding: 0 20px;
   border-bottom: 1px solid var(--line);
-  background: var(--surface);
+  background: var(--page);
 }
 .brand {
   display: flex;
@@ -718,7 +720,7 @@ button {
   justify-content: space-between;
   padding: 0 18px;
   border-top: 1px solid var(--line);
-  background: var(--surface);
+  background: var(--page);
   font-size: 13px;
 }
 .status-left {
