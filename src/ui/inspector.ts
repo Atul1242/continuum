@@ -65,6 +65,11 @@ export function renderInspector(app: AppContext): void {
     if (dirty) {
       children.push(el("div", { class: "dirty-hint" }, ["Unsaved — synced to your other devices."]));
     }
+    children.push(
+      el("div", { class: "inspector-meta" }, [
+        `${view.type} · ${view.w}×${view.h} · position ${view.x}, ${view.y}`,
+      ]),
+    );
   }
 
   root.replaceChildren(...children);
