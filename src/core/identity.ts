@@ -75,5 +75,7 @@ export function resolveIdentity(): Identity {
 
 export function workspaceId(): string {
   const url = new URL(location.href);
-  return url.searchParams.get("room") ?? "main";
+  const raw = url.searchParams.get("room") ?? "main";
+  // Keep in step with the server's workspace-name rule.
+  return /^[a-z0-9_-]{1,64}$/i.test(raw) ? raw : "main";
 }

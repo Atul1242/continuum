@@ -21,6 +21,14 @@ const PORT = Number(process.env.SYNC_PORT ?? 1234);
 const STORE_DIR = join(process.cwd(), ".sync-store");
 mkdirSync(STORE_DIR, { recursive: true });
 
+// Optional shared secret. When SYNC_TOKEN is set, clients must present it as a
+// ?token= query param; unset (the default for local demos) means open access.
+const TOKEN = process.env.SYNC_TOKEN ?? "";
+// Reject oversized frames so a single client can't exhaust memory.
+const MAX_PAYLOAD = 2 * 1024 * 1024;
+// Workspace names become file paths, so constrain them tightly.
+const ROOM_RE = /^[a-z0-9_-]{1,64}$/i;
+
 const MSG_SYNC = 0;
 const MSG_AWARENESS = 1;
 
@@ -98,10 +106,31 @@ function scheduleSave(room: Room): void {
   }, 1500);
 }
 
-const wss = new WebSocketServer({ port: PORT });
+const wss = new WebSocketServer({
+  port: PORT,
+  maxPayload: MAX_PAYLOAD,
+  verifyClient: (info, done) => {
+    if (!TOKEN) return done(true);
+    try {
+      const url = new URL(info.req.url ?? "", "http://localhost");
+      done(url.searchParams.get("token") === TOKEN);
+    } catch {
+      done(false);
+    }
+  },
+});
 
 wss.on("connection", (conn, req) => {
-  const name = (req.url ?? "/main").slice(1).split("?")[0] || "main";
+  let name = "main";
+  try {
+    name = decodeURIComponent((req.url ?? "/main").slice(1).split("?")[0] || "main");
+  } catch {
+    name = "";
+  }
+  if (!ROOM_RE.test(name)) {
+    conn.close(1008, "invalid workspace");
+    return;
+  }
   const room = getRoom(name);
   const controlled = new Set<number>();
   room.conns.set(conn, controlled);
@@ -126,21 +155,26 @@ wss.on("connection", (conn, req) => {
   }
 
   conn.on("message", (data: ArrayBuffer) => {
-    const decoder = decoding.createDecoder(new Uint8Array(data));
-    const reply = encoding.createEncoder();
-    const type = decoding.readVarUint(decoder);
+    // A malformed frame must never take down the connection or the process.
+    try {
+      const decoder = decoding.createDecoder(new Uint8Array(data));
+      const reply = encoding.createEncoder();
+      const type = decoding.readVarUint(decoder);
 
-    if (type === MSG_SYNC) {
-      encoding.writeVarUint(reply, MSG_SYNC);
-      syncProtocol.readSyncMessage(decoder, reply, room.doc, conn);
-      if (encoding.length(reply) > 1) conn.send(encoding.toUint8Array(reply));
-    } else if (type === MSG_AWARENESS) {
-      const update = decoding.readVarUint8Array(decoder);
-      const before = new Set(room.awareness.getStates().keys());
-      applyAwarenessUpdate(room.awareness, update, conn);
-      for (const id of room.awareness.getStates().keys()) {
-        if (!before.has(id)) controlled.add(id);
+      if (type === MSG_SYNC) {
+        encoding.writeVarUint(reply, MSG_SYNC);
+        syncProtocol.readSyncMessage(decoder, reply, room.doc, conn);
+        if (encoding.length(reply) > 1) conn.send(encoding.toUint8Array(reply));
+      } else if (type === MSG_AWARENESS) {
+        const update = decoding.readVarUint8Array(decoder);
+        const before = new Set(room.awareness.getStates().keys());
+        applyAwarenessUpdate(room.awareness, update, conn);
+        for (const id of room.awareness.getStates().keys()) {
+          if (!before.has(id)) controlled.add(id);
+        }
       }
+    } catch (err) {
+      console.error(`[continuum] bad frame on "${name}":`, err);
     }
   });
 
